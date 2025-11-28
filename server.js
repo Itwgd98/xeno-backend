@@ -1,13 +1,18 @@
 import express from "express";
+import { connectDB } from "./models/index.js";
 import dotenv from "dotenv";
 import cors from "cors";
 
 dotenv.config();
+
 const app = express();
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+// Test DB Connection
+connectDB();
 
 // Test Route
 app.get("/", (req, res) => {
