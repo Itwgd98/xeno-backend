@@ -30,13 +30,22 @@ export const connectDB = async () => {
 
 
 // Model Associations
-Tenant.hasMany(Customer);
-Customer.belongsTo(Tenant);
+// Tenant relations
+Tenant.hasMany(Customer, { foreignKey: "tenantId" });
+Customer.belongsTo(Tenant, { foreignKey: "tenantId" });
 
-Tenant.hasMany(Product);
-Product.belongsTo(Tenant);
+Tenant.hasMany(Order, { foreignKey: "tenantId" });
+Order.belongsTo(Tenant, { foreignKey: "tenantId" });
 
-Tenant.hasMany(Order);
-Order.belongsTo(Tenant);
+Tenant.hasMany(Product, { foreignKey: "tenantId" });
+Product.belongsTo(Tenant, { foreignKey: "tenantId" });
+
+// Customer ↔ Orders
+Customer.hasMany(Order, { foreignKey: "customerId" });
+Order.belongsTo(Customer, { foreignKey: "customerId" });
+
+// Product ↔ Orders
+Product.hasMany(Order, { foreignKey: "productId" });
+Order.belongsTo(Product, { foreignKey: "productId" });
 
 export { Customer, Product, Order, Tenant };
