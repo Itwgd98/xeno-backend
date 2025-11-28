@@ -1,4 +1,5 @@
 import express from "express";
+import '@shopify/shopify-api/adapters/node';
 import { shopifyApi, LATEST_API_VERSION } from "@shopify/shopify-api";
 
 const router = express.Router();
