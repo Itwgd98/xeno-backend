@@ -3,6 +3,9 @@ import shopifyRoutes from "./routes/shopify.js";
 import dotenv from "dotenv";
 import cors from "cors";
 import sequelize from "./utils/db.js";
+import shopifyAuthRoutes from "./routes/shopifyAuth.js";
+
+
 
 dotenv.config();
 
@@ -10,6 +13,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/", shopifyRoutes);
+app.use("/auth", shopifyAuthRoutes);
 // Test DB connection
 sequelize.authenticate()
   .then(() => console.log("PostgreSQL Connected"))
