@@ -21,6 +21,7 @@ router.get("/install", (req, res) => {
   if (!shop) return res.status(400).send("Shop parameter missing");
 
   const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}&scope=${SCOPES}&redirect_uri=${REDIRECT_URI}&state=12345`;
+
   res.redirect(installUrl);
 });
 
