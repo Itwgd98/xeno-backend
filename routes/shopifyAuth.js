@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import axios from "axios";
-import Store from "./models/store.js";
+import Store from "../models/store.js";
 
 
 
