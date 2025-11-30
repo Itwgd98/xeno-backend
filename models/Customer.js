@@ -1,40 +1,13 @@
-module.exports = (sequelize, DataTypes) => {
-  const Customer = sequelize.define("Customer", {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
-    tenantId: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    },
-    shopId: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    firstName: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    lastName: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    totalSpent: {
-      type: DataTypes.FLOAT,
-      defaultValue: 0
-    }
-  });
+import { DataTypes } from "sequelize";
+import sequelize from "../utils/db.js";
 
-  Customer.associate = (models) => {
-    Customer.belongsTo(models.Tenant, { foreignKey: "tenantId" });
-  };
+const Customer = sequelize.define("Customer", {
+  tenantId: { type: DataTypes.INTEGER, allowNull: false },
+  shopId: { type: DataTypes.STRING, unique: true },
+  email: DataTypes.STRING,
+  firstName: DataTypes.STRING,
+  lastName: DataTypes.STRING,
+  totalSpent: { type: DataTypes.FLOAT, defaultValue: 0 }
+});
 
-  return Customer;
-};
+export default Customer;
