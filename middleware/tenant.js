@@ -1,13 +1,13 @@
-const { Tenant } = require("../models");
+import { Tenant } from "../models/index.js";
 
-module.exports = async function tenantMiddleware(req, res, next) {
+export default async function tenantMiddleware(req, res, next) {
   try {
     const tenantId = req.headers["x-tenant-id"];
     const shopDomain = req.headers["x-shop-domain"];
 
-    let tenant = null;
+    let tenant;
 
-    if (tenantId) {
+    if (tenantId && /^\d+$/.test(tenantId)) {
       tenant = await Tenant.findByPk(tenantId);
     } else if (shopDomain) {
       tenant = await Tenant.findOne({ where: { shopDomain } });
@@ -18,9 +18,10 @@ module.exports = async function tenantMiddleware(req, res, next) {
     }
 
     req.tenant = tenant;
+
     next();
   } catch (err) {
     console.error("Tenant middleware error:", err);
-    res.status(500).json({ error: "Internal error" });
+    res.status(500).json({ error: "Middleware error" });
   }
-};
+}

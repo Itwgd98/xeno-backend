@@ -1,5 +1,5 @@
-const express = require("express");
-const { Order, Customer } = require("../models");
+import express from "express";
+import { Order, Customer } from "../models/index.js";
 
 const router = express.Router();
 
@@ -10,18 +10,23 @@ router.get("/", async (req, res) => {
     const totalCustomers = await Customer.count({ where: { tenantId } });
     const totalOrders = await Order.count({ where: { tenantId } });
 
-    const revenueResult = await Order.sum("total", { where: { tenantId } });
-    const totalRevenue = revenueResult || 0;
+    const totalRevenue = (await Order.sum("total", { where: { tenantId } })) || 0;
 
-    const ordersByDate = await Order.findAll({
-      where: { tenantId },
-      attributes: [
-        [Order.sequelize.fn("DATE", Order.sequelize.col("createdAt")), "date"],
-        [Order.sequelize.fn("SUM", Order.sequelize.col("total")), "revenue"],
-      ],
-      group: ["date"],
-      order: [[Order.sequelize.literal("date"), "ASC"]],
-    });
+    const ordersByDate = await Order.sequelize.query(
+      `
+      SELECT DATE("createdAt") AS day, 
+             SUM(total) AS revenue,
+             COUNT(*) AS orders
+      FROM "Orders"
+      WHERE "tenantId" = :tenantId
+      GROUP BY day
+      ORDER BY day ASC
+      `,
+      {
+        replacements: { tenantId },
+        type: Order.sequelize.QueryTypes.SELECT,
+      }
+    );
 
     const topCustomers = await Customer.findAll({
       where: { tenantId },
@@ -38,8 +43,8 @@ router.get("/", async (req, res) => {
     });
   } catch (err) {
     console.error("Metrics error:", err);
-    res.status(500).json({ error: "Internal error" });
+    res.status(500).json({ error: "Error fetching metrics" });
   }
 });
 
-module.exports = router;
+export default router;

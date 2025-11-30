@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Xeno — Login</title>
+
+  <!-- Tailwind Play CDN - quick & modern -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Tailwind config for dark mode
+    tailwind.config = { darkMode: 'class' }
+  </script>
+
+  <style>
+    html,body { height: 100%; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 antialiased">
+  <div class="min-h-screen flex items-center justify-center px-4">
+    <div class="max-w-xl w-full bg-gray-800 rounded-2xl shadow-xl p-8">
+      <div class="flex items-center gap-4 mb-6">
+        <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-pink-500 rounded-lg flex items-center justify-center">
+          <!-- simple logo -->
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" class="text-white">
+            <path d="M12 2L19 8v8l-7 6-7-6V8l7-6z" fill="currentColor"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-semibold">Xeno Insights</h1>
+          <p class="text-sm text-gray-300">Lightweight dashboard — served from your backend</p>
+        </div>
+      </div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-300 mb-1">Your email (for demo)</label>
+          <input id="email" type="email" required placeholder="you@example.com"
+                 class="w-full bg-gray-700 border border-gray-700 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        </div>
+
+        <div>
+          <label class="block text-sm text-gray-300 mb-1">Tenant identifier</label>
+          <input id="tenantId" type="text" required placeholder="Enter tenant id or shop domain"
+                 class="w-full bg-gray-700 border border-gray-700 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          <p class="text-xs text-gray-400 mt-1">Use the numeric <code>x-tenant-id</code> or the Shopify domain (e.g. myshop.myshopify.com). This app will store it locally for demo.</p>
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <button type="submit" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium">
+            Enter Dashboard
+          </button>
+          <button id="demoBtn" type="button" class="px-3 py-2 border border-gray-700 rounded-md text-gray-300">Use Demo</button>
+        </div>
+
+        <p class="text-xs text-gray-500 mt-3">Note: This is a demo frontend. No extra deployment — files served from the backend.</p>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Basic client-side "auth" behaviour
+    const form = document.getElementById('loginForm');
+    const demoBtn = document.getElementById('demoBtn');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const tenant = document.getElementById('tenantId').value.trim();
+      if (!email || !tenant) return alert('Email and tenant are required');
+      localStorage.setItem('xeno_email', email);
+      localStorage.setItem('xeno_tenant', tenant);
+      // go to dashboard
+      location.href = '/dashboard.html';
+    });
+
+    demoBtn.addEventListener('click', () => {
+      // Demo values — change to a tenant you have in DB
+      localStorage.setItem('xeno_email', 'demo@xeno.com');
+      localStorage.setItem('xeno_tenant', '1'); // default tenant id
+      location.href = '/dashboard.html';
+    });
+  </script>
+</body>
+</html>

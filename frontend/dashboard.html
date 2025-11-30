@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Xeno — Dashboard</title>
+
+  <!-- Tailwind and Chart.js -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
+
+  <style>
+    .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+  <div class="min-h-screen p-6">
+    <header class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-pink-500 rounded-lg flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="text-white">
+            <path d="M12 2L19 8v8l-7 6-7-6V8l7-6z" fill="currentColor"></path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-xl font-semibold">Xeno Insights</h2>
+          <p class="text-sm text-gray-400">Multi-tenant Shopify analytics</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div id="tenantBadge" class="text-sm text-gray-300"></div>
+        <button id="logoutBtn" class="px-3 py-2 rounded-md bg-gray-800 border border-gray-700 text-gray-300">Logout</button>
+      </div>
+    </header>
+
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Metrics -->
+      <section class="lg:col-span-1 space-y-4">
+        <div class="p-4 rounded-2xl card">
+          <h3 class="text-sm text-gray-400">Total customers</h3>
+          <div id="totalCustomers" class="text-2xl font-bold mt-2">—</div>
+        </div>
+
+        <div class="p-4 rounded-2xl card">
+          <h3 class="text-sm text-gray-400">Total orders</h3>
+          <div id="totalOrders" class="text-2xl font-bold mt-2">—</div>
+        </div>
+
+        <div class="p-4 rounded-2xl card">
+          <h3 class="text-sm text-gray-400">Total revenue</h3>
+          <div id="totalRevenue" class="text-2xl font-bold mt-2">—</div>
+        </div>
+
+        <div class="p-4 rounded-2xl card">
+          <h3 class="text-sm text-gray-400">Top customers</h3>
+          <ol id="topCustomers" class="mt-3 text-sm list-decimal list-inside text-gray-200"></ol>
+        </div>
+      </section>
+
+      <!-- Revenue chart -->
+      <section class="lg:col-span-2 space-y-4">
+        <div class="p-6 rounded-2xl card">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-md text-gray-300">Orders by day (Revenue)</h3>
+            <div>
+              <input id="fromDate" type="date" class="bg-gray-800 text-sm p-2 rounded-md mr-2" />
+              <input id="toDate" type="date" class="bg-gray-800 text-sm p-2 rounded-md" />
+              <button id="refreshBtn" class="ml-3 px-3 py-2 bg-indigo-500 rounded-md">Refresh</button>
+            </div>
+          </div>
+          <canvas id="revenueChart" height="120"></canvas>
+        </div>
+
+        <div class="p-6 rounded-2xl card">
+          <h3 class="text-md text-gray-300 mb-4">Orders table (latest)</h3>
+          <div class="overflow-auto max-h-64">
+            <table class="w-full text-left text-sm">
+              <thead class="text-gray-400">
+                <tr>
+                  <th class="p-2">Date</th>
+                  <th class="p-2">Shop Order ID</th>
+                  <th class="p-2">Total</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTable" class="text-gray-200"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

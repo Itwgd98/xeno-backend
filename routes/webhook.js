@@ -1,59 +1,56 @@
-const express = require("express");
-const crypto = require("crypto");
-const { Order, Customer, Product, Tenant } = require("../models");
+import express from "express";
+import crypto from "crypto";
+import { Tenant, Order, Customer, Product } from "../models/index.js";
 
 const router = express.Router();
 
+// Shopify HMAC verification
 function verifyShopifyWebhook(req, secret) {
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
-  const body = req.rawBody;
-
-  const hash = crypto
+  const body = req.body; // raw buffer
+  const digest = crypto
     .createHmac("sha256", secret)
     .update(body, "utf8")
     .digest("base64");
-
-  return hash === hmacHeader;
+  return digest === hmacHeader;
 }
 
-// Raw body parser for Shopify
-router.use(
-  express.raw({ type: "application/json" })
-);
+// IMPORTANT: DO NOT USE express.json() here.
+// This route is wrapped with express.raw() in server.js
 
 router.post("/", async (req, res) => {
   try {
-    const shopDomain = req.get("X-Shopify-Shop-Domain");
-    const topic = req.get("X-Shopify-Topic");
-
     const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
     if (!verifyShopifyWebhook(req, secret)) {
-      return res.status(401).send("Invalid signature");
+      return res.status(401).send("Invalid HMAC signature");
     }
+
+    const topic = req.get("X-Shopify-Topic");
+    const shopDomain = req.get("X-Shopify-Shop-Domain");
 
     const tenant = await Tenant.findOne({ where: { shopDomain } });
     if (!tenant) return res.status(200).send("Tenant not found");
 
-    const data = JSON.parse(req.body.toString("utf8"));
+    const payload = JSON.parse(req.body.toString("utf8"));
 
     switch (topic) {
       case "orders/create":
       case "orders/updated":
         await Order.upsert({
-          shopId: data.id,
+          shopId: payload.id,
           tenantId: tenant.id,
-          total: data.total_price,
-          createdAt: data.created_at,
+          total: parseFloat(payload.total_price || 0),
+          createdAt: payload.created_at,
         });
 
-        if (data.customer) {
+        if (payload.customer) {
           await Customer.upsert({
-            shopId: data.customer.id,
+            shopId: payload.customer.id,
             tenantId: tenant.id,
-            email: data.customer.email,
-            firstName: data.customer.first_name,
-            lastName: data.customer.last_name,
-            totalSpent: data.total_price,
+            email: payload.customer.email,
+            firstName: payload.customer.first_name,
+            lastName: payload.customer.last_name,
+            totalSpent: parseFloat(payload.total_price || 0),
           });
         }
         break;
@@ -61,22 +58,22 @@ router.post("/", async (req, res) => {
       case "products/create":
       case "products/update":
         await Product.upsert({
-          shopId: data.id,
+          shopId: payload.id,
           tenantId: tenant.id,
-          title: data.title,
-          price: data.variants?.[0]?.price || 0,
+          title: payload.title,
+          price: parseFloat(payload.variants?.[0]?.price || 0),
         });
         break;
 
       default:
-        break;
+        console.log("Unhandled Shopify topic:", topic);
     }
 
     res.status(200).send("OK");
   } catch (err) {
-    console.error("Webhook error", err);
+    console.error("Webhook error:", err);
     res.status(500).send("Error");
   }
 });
 
-module.exports = router;
+export default router;
