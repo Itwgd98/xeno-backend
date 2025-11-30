@@ -5,9 +5,17 @@ import cors from "cors";
 import sequelize from "./utils/db.js";
 import shopifyAuthRoutes from "./routes/shopifyAuth.js";
 
-
-
 dotenv.config();
+const webhookRoute = require("./routes/webhook");
+const metricsRoute = require("./routes/metrics");
+const tenantMiddleware = require("./middleware/tenant");
+
+// webhook without tenant middleware
+app.use("/webhook", webhookRoute);
+
+// tenant-protected metrics
+app.use("/metrics", tenantMiddleware, metricsRoute);
+
 
 const app = express();
 app.use(cors());

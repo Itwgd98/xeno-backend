@@ -1,12 +1,15 @@
+import { Sequelize } from "sequelize";
+import dotenv from "dotenv";
+
 import Customer from "./Customer.js";
 import Product from "./Product.js";
 import Order from "./Order.js";
 import Tenant from "./Tenant.js";
-import { Sequelize } from "sequelize";
-import dotenv from "dotenv";
+import Store from "./Store.js";
 
 dotenv.config();
 
+// Initialize Sequelize
 export const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: "postgres",
   logging: false,
@@ -18,7 +21,7 @@ export const sequelize = new Sequelize(process.env.DATABASE_URL, {
   },
 });
 
-// Test DB connection
+// Test DB Connection
 export const connectDB = async () => {
   try {
     await sequelize.authenticate();
@@ -28,9 +31,15 @@ export const connectDB = async () => {
   }
 };
 
+/* ---------------------------------------------------------
+   MODEL ASSOCIATIONS
+----------------------------------------------------------*/
 
-// Model Associations
-// Tenant relations
+// 🟩 Store belongs to Tenant (multi-tenant architecture)
+Store.belongsTo(Tenant, { foreignKey: "tenantId" });
+Tenant.hasMany(Store, { foreignKey: "tenantId" });
+
+// 🟩 Customers, Orders, Products all associated to a Tenant
 Tenant.hasMany(Customer, { foreignKey: "tenantId" });
 Customer.belongsTo(Tenant, { foreignKey: "tenantId" });
 
@@ -40,12 +49,12 @@ Order.belongsTo(Tenant, { foreignKey: "tenantId" });
 Tenant.hasMany(Product, { foreignKey: "tenantId" });
 Product.belongsTo(Tenant, { foreignKey: "tenantId" });
 
-// Customer ↔ Orders
-Customer.hasMany(Order, { foreignKey: "customerId" });
-Order.belongsTo(Customer, { foreignKey: "customerId" });
+/*
+ ❌ Removing wrong associations:
+   - Shopify orders do NOT have customerId FK
+   - Shopify orders do NOT have productId FK
+   - Shopify orders contain multiple line items
+*/
 
-// Product ↔ Orders
-Product.hasMany(Order, { foreignKey: "productId" });
-Order.belongsTo(Product, { foreignKey: "productId" });
-
-export { Customer, Product, Order, Tenant };
+// Export all models
+export { Customer, Product, Order, Tenant, Store };
