@@ -1,4 +1,4 @@
-import { Tenant } from '../models/index.js';
+import Tenant from '../models/Tenant.js';
 import { generateToken } from '../utils/jwt.js';
 import { logger } from '../utils/logger.js';
 
