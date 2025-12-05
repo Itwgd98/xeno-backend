@@ -11,7 +11,7 @@ export function generateToken(tenantId, email) {
     const token = jwt.sign(
       { tenantId, email },
       SECRET_KEY,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' } // Extended to 30 days
     );
     return token;
   } catch (err) {

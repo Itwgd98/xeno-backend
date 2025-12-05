@@ -2,12 +2,22 @@ import express from "express";
 import { Op } from "sequelize";
 import { Order, Customer } from "../models/index.js";
 import { logger } from "../utils/logger.js";
+import authMiddleware from "../middleware/auth.js";
+import Tenant from "../models/Tenant.js";
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+router.get("/", authMiddleware, async (req, res) => {
   try {
-    const tenantId = req.tenant.id;
+    // Get tenant from auth middleware
+    const tenantId = req.user.tenantId;
+    
+    // Get tenant to validate it exists
+    const tenant = await Tenant.findByPk(tenantId);
+    if (!tenant) {
+      return res.status(401).json({ error: "Tenant not found" });
+    }
+
     const { from, to } = req.query;
 
     // Build date filters

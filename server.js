@@ -62,9 +62,9 @@ app.use("/auth/shopify", shopifyAuthRoutes);
 app.use("/orders", ordersRoute);
 
 /* ------------------------------------------------------
-   6) Metrics API (use tenant middleware as fallback)
+   6) Metrics API (with JWT auth)
 ------------------------------------------------------ */
-app.use("/metrics", tenantMiddleware, metricsRoute);
+app.use("/metrics", metricsRoute);
 
 /* ------------------------------------------------------
    7) Legacy Shopify REST routes (if needed)
