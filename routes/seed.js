@@ -1,6 +1,7 @@
 import express from "express";
 import { logger } from "../utils/logger.js";
-import { Tenant, Store } from "../models/index.js";
+import Tenant from "../models/Tenant.js";
+import Store from "../models/Store.js";
 
 const router = express.Router();
 
@@ -88,17 +89,20 @@ router.get("/status", async (req, res) => {
   try {
     const tenant = await Tenant.findOne({
       where: { name: "Demo Tenant" },
-      include: [{ association: "stores" }],
     });
 
     if (tenant) {
+      const stores = await Store.findAll({
+        where: { tenantId: tenant.id },
+      });
+
       return res.json({
         success: true,
         message: "Demo tenant exists",
         tenant: {
           id: tenant.id,
           name: tenant.name,
-          storeCount: tenant.stores?.length || 0,
+          storeCount: stores?.length || 0,
         },
       });
     } else {
