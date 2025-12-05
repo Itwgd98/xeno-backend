@@ -1,11 +1,13 @@
-// app.js - simple client for /metrics
+// app.js - Dashboard with JWT auth
 (async () => {
-  // Helpers
-  const tenant = localStorage.getItem('xeno_tenant');
+  // Get auth token and tenant info
+  const token = localStorage.getItem('xeno_token');
   const email = localStorage.getItem('xeno_email');
+  const tenantId = localStorage.getItem('xeno_tenant');
+  const shopDomain = localStorage.getItem('xeno_shop');
 
-  if (!tenant || !email) {
-    // not logged in — go back
+  if (!token || !email || !tenantId) {
+    // Not authenticated — go back to login
     location.href = '/';
     return;
   }
@@ -13,105 +15,166 @@
   // Elements
   const tenantBadge = document.getElementById('tenantBadge');
   const logoutBtn = document.getElementById('logoutBtn');
+  const syncBtn = document.getElementById('syncBtn');
+  const syncText = document.getElementById('syncText');
   const totalCustomersEl = document.getElementById('totalCustomers');
   const totalOrdersEl = document.getElementById('totalOrders');
   const totalRevenueEl = document.getElementById('totalRevenue');
   const topCustomersEl = document.getElementById('topCustomers');
   const ordersTable = document.getElementById('ordersTable');
+  const lastSyncEl = document.getElementById('lastSync');
 
   const fromDateEl = document.getElementById('fromDate');
   const toDateEl = document.getElementById('toDate');
   const refreshBtn = document.getElementById('refreshBtn');
 
-  tenantBadge.textContent = `${email} · tenant: ${tenant}`;
+  tenantBadge.textContent = `${email} • tenant: ${tenantId}`;
 
   logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('xeno_email');
-    localStorage.removeItem('xeno_tenant');
+    localStorage.clear();
     location.href = '/';
   });
 
-  // Chart.js setup
+  // Build auth header with JWT
+  function getHeaders() {
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  }
+
+  // Chart setup
   const ctx = document.getElementById('revenueChart').getContext('2d');
   const revenueChart = new Chart(ctx, {
     type: 'line',
-    data: { labels: [], datasets: [{ label: 'Revenue', data: [], tension: 0.3, fill: true }] },
+    data: { 
+      labels: [], 
+      datasets: [{
+        label: 'Revenue',
+        data: [],
+        tension: 0.3,
+        fill: true,
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        pointBackgroundColor: '#6366f1',
+        pointBorderColor: '#fff'
+      }]
+    },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { mode: 'index' } },
-      scales: { y: { beginAtZero: true } }
+      plugins: { 
+        legend: { display: false }, 
+        tooltip: { mode: 'index' } 
+      },
+      scales: { 
+        y: { 
+          beginAtZero: true,
+          ticks: { color: '#9ca3af' },
+          grid: { color: '#374151' }
+        },
+        x: {
+          ticks: { color: '#9ca3af' },
+          grid: { color: '#374151' }
+        }
+      }
     }
   });
-
-  // Build headers
-  function buildHeaders() {
-    // if tenant looks numeric, use x-tenant-id else use x-shop-domain
-    const headers = {};
-    if (/^\d+$/.test(tenant)) headers['x-tenant-id'] = tenant;
-    else headers['x-shop-domain'] = tenant;
-    return headers;
-  }
 
   // Fetch metrics
   async function fetchMetrics() {
     try {
-      const headers = buildHeaders();
       const params = new URLSearchParams();
       if (fromDateEl.value) params.set('from', fromDateEl.value);
       if (toDateEl.value) params.set('to', toDateEl.value);
-      const url = `/metrics?${params.toString()}`;
 
-      const res = await fetch(url, { headers });
-      if (!res.ok) throw new Error('Failed to fetch metrics: ' + res.statusText);
+      const res = await fetch(`/metrics?${params}`, {
+        headers: getHeaders()
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert('Session expired. Please login again.');
+          location.href = '/';
+          return;
+        }
+        throw new Error('Failed to fetch metrics: ' + res.statusText);
+      }
+
       const data = await res.json();
 
-      // update UI
+      // Remove loading class
+      totalCustomersEl.classList.remove('loading');
+      totalOrdersEl.classList.remove('loading');
+      totalRevenueEl.classList.remove('loading');
+
+      // Update UI
       totalCustomersEl.textContent = data.totalCustomers ?? 0;
       totalOrdersEl.textContent = data.totalOrders ?? 0;
-      totalRevenueEl.textContent = Number(data.totalRevenue ?? 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+      totalRevenueEl.textContent = Number(data.totalRevenue ?? 0).toLocaleString(undefined, { 
+        style: 'currency', 
+        currency: 'USD', 
+        maximumFractionDigits: 2 
+      });
 
-      // top customers
+      // Top customers
       topCustomersEl.innerHTML = '';
       (data.topCustomers || []).forEach(c => {
         const li = document.createElement('li');
-        li.textContent = `${c.email ?? (c.firstName || '—')} — ${Number(c.totalSpent ?? 0).toLocaleString()}`;
+        li.textContent = `${c.email ?? (c.firstName || '—')} — ${Number(c.totalSpent ?? 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}`;
         topCustomersEl.appendChild(li);
       });
 
-      // orders by date -> chart
+      // Revenue chart
       const ob = data.ordersByDate || [];
       const labels = ob.map(r => {
-        const d = new Date(r.date || r.day || r.day);
-        return d.toLocaleDateString();
+        const d = new Date(r.day);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       });
-      const revenues = ob.map(r => Number(r.revenue ?? r.sum ?? 0));
+      const revenues = ob.map(r => Number(r.revenue ?? 0));
 
       revenueChart.data.labels = labels;
       revenueChart.data.datasets[0].data = revenues;
       revenueChart.update();
 
-      // latest orders table (we don't have an API for paginated orders by default; use a quick /orders fallback)
-      // If backend has /orders?limit=10 we can call it; otherwise show orders from ordersByDate is fine.
-      // For now show last 10 orders summary if backend exposes orders endpoint:
+      // Orders table
       try {
-        const ordersRes = await fetch('/orders?limit=10', { headers });
+        const ordersRes = await fetch('/orders?limit=10', { headers: getHeaders() });
         if (ordersRes.ok) {
-          const orders = await ordersRes.json();
+          const orderData = await ordersRes.json();
           ordersTable.innerHTML = '';
-          (orders || []).forEach(o => {
+          (orderData.orders || []).forEach(o => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td class="p-2">${new Date(o.createdAt).toLocaleString()}</td>
-                            <td class="p-2">${o.shopId}</td>
-                            <td class="p-2">${Number(o.total ?? 0).toLocaleString()}</td>`;
+            tr.className = 'border-t border-gray-700 hover:bg-gray-800';
+            tr.innerHTML = `
+              <td class="p-2">${new Date(o.createdAt).toLocaleString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}</td>
+              <td class="p-2 font-mono text-xs">${o.shopId.slice(0, 8)}...</td>
+              <td class="p-2">${Number(o.total ?? 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })}</td>
+            `;
             ordersTable.appendChild(tr);
           });
         } else {
-          // fallback: clear table
-          ordersTable.innerHTML = '<tr><td class="p-2 text-gray-400" colspan="3">Orders endpoint not available</td></tr>';
+          ordersTable.innerHTML = '<tr><td class="p-2 text-gray-400" colspan="3">No orders available</td></tr>';
         }
       } catch (err) {
-        ordersTable.innerHTML = '<tr><td class="p-2 text-gray-400" colspan="3">Orders fetch error</td></tr>';
+        ordersTable.innerHTML = '<tr><td class="p-2 text-gray-400" colspan="3">Orders load error</td></tr>';
+      }
+
+      // Get sync status
+      try {
+        const syncRes = await fetch('/sync/status', { headers: getHeaders() });
+        if (syncRes.ok) {
+          const syncData = await syncRes.json();
+          const lastSync = syncData.lastSyncAt ? new Date(syncData.lastSyncAt).toLocaleString() : 'Never';
+          lastSyncEl.textContent = `Last sync: ${lastSync}`;
+        }
+      } catch (err) {
+        lastSyncEl.textContent = 'Sync status unavailable';
       }
 
     } catch (err) {
@@ -120,17 +183,44 @@
     }
   }
 
-  // initial date range: last 30 days
-  const t = new Date();
-  toDateEl.value = t.toISOString().slice(0,10);
-  t.setDate(t.getDate() - 30);
-  fromDateEl.value = t.toISOString().slice(0,10);
+  // Sync now button
+  syncBtn.addEventListener('click', async () => {
+    syncBtn.disabled = true;
+    syncText.textContent = 'Syncing...';
 
+    try {
+      const res = await fetch('/sync/now', {
+        method: 'POST',
+        headers: getHeaders()
+      });
+
+      if (!res.ok) {
+        throw new Error('Sync failed');
+      }
+
+      const result = await res.json();
+      alert(`Sync complete: ${result.customers} customers, ${result.orders} orders, ${result.products} products`);
+      await fetchMetrics();
+    } catch (err) {
+      alert('Sync error: ' + err.message);
+    } finally {
+      syncBtn.disabled = false;
+      syncText.textContent = 'Sync Now';
+    }
+  });
+
+  // Set default date range: last 30 days
+  const t = new Date();
+  toDateEl.value = t.toISOString().slice(0, 10);
+  t.setDate(t.getDate() - 30);
+  fromDateEl.value = t.toISOString().slice(0, 10);
+
+  // Event listeners
   refreshBtn.addEventListener('click', fetchMetrics);
 
-  // load on open
+  // Load metrics on page open
   await fetchMetrics();
 
-  // optional: auto refresh every 5 minutes
+  // Auto-refresh every 5 minutes
   setInterval(fetchMetrics, 5 * 60 * 1000);
 })();

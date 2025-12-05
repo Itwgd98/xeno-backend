@@ -12,6 +12,8 @@
 
   <style>
     .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); }
+    .loading { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
@@ -29,9 +31,12 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-4">
         <div id="tenantBadge" class="text-sm text-gray-300"></div>
-        <button id="logoutBtn" class="px-3 py-2 rounded-md bg-gray-800 border border-gray-700 text-gray-300">Logout</button>
+        <button id="syncBtn" class="px-3 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm">
+          <span id="syncText">Sync Now</span>
+        </button>
+        <button id="logoutBtn" class="px-3 py-2 rounded-md bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700">Logout</button>
       </div>
     </header>
 
@@ -40,17 +45,22 @@
       <section class="lg:col-span-1 space-y-4">
         <div class="p-4 rounded-2xl card">
           <h3 class="text-sm text-gray-400">Total customers</h3>
-          <div id="totalCustomers" class="text-2xl font-bold mt-2">—</div>
+          <div id="totalCustomers" class="text-2xl font-bold mt-2 loading">—</div>
         </div>
 
         <div class="p-4 rounded-2xl card">
           <h3 class="text-sm text-gray-400">Total orders</h3>
-          <div id="totalOrders" class="text-2xl font-bold mt-2">—</div>
+          <div id="totalOrders" class="text-2xl font-bold mt-2 loading">—</div>
         </div>
 
         <div class="p-4 rounded-2xl card">
           <h3 class="text-sm text-gray-400">Total revenue</h3>
-          <div id="totalRevenue" class="text-2xl font-bold mt-2">—</div>
+          <div id="totalRevenue" class="text-2xl font-bold mt-2 loading">—</div>
+        </div>
+
+        <div class="p-4 rounded-2xl card">
+          <h3 class="text-sm text-gray-400">Sync status</h3>
+          <p id="lastSync" class="text-xs text-gray-400 mt-2">Loading...</p>
         </div>
 
         <div class="p-4 rounded-2xl card">
@@ -59,28 +69,28 @@
         </div>
       </section>
 
-      <!-- Revenue chart -->
+      <!-- Revenue chart & table -->
       <section class="lg:col-span-2 space-y-4">
         <div class="p-6 rounded-2xl card">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
             <h3 class="text-md text-gray-300">Orders by day (Revenue)</h3>
-            <div>
-              <input id="fromDate" type="date" class="bg-gray-800 text-sm p-2 rounded-md mr-2" />
-              <input id="toDate" type="date" class="bg-gray-800 text-sm p-2 rounded-md" />
-              <button id="refreshBtn" class="ml-3 px-3 py-2 bg-indigo-500 rounded-md">Refresh</button>
+            <div class="flex gap-2">
+              <input id="fromDate" type="date" class="bg-gray-800 border border-gray-700 text-sm p-2 rounded-md" />
+              <input id="toDate" type="date" class="bg-gray-800 border border-gray-700 text-sm p-2 rounded-md" />
+              <button id="refreshBtn" class="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-md text-sm">Refresh</button>
             </div>
           </div>
           <canvas id="revenueChart" height="120"></canvas>
         </div>
 
         <div class="p-6 rounded-2xl card">
-          <h3 class="text-md text-gray-300 mb-4">Orders table (latest)</h3>
-          <div class="overflow-auto max-h-64">
+          <h3 class="text-md text-gray-300 mb-4">Recent orders</h3>
+          <div class="overflow-auto max-h-80">
             <table class="w-full text-left text-sm">
-              <thead class="text-gray-400">
+              <thead class="text-gray-400 sticky top-0 bg-gray-800">
                 <tr>
                   <th class="p-2">Date</th>
-                  <th class="p-2">Shop Order ID</th>
+                  <th class="p-2">Order ID</th>
                   <th class="p-2">Total</th>
                 </tr>
               </thead>

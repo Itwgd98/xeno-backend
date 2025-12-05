@@ -28,58 +28,108 @@
         </div>
         <div>
           <h1 class="text-2xl font-semibold">Xeno Insights</h1>
-          <p class="text-sm text-gray-300">Lightweight dashboard — served from your backend</p>
+          <p class="text-sm text-gray-300">Shopify Data Analytics</p>
         </div>
       </div>
 
       <form id="loginForm" class="space-y-4">
         <div>
-          <label class="block text-sm text-gray-300 mb-1">Your email (for demo)</label>
+          <label class="block text-sm text-gray-300 mb-1">Your email</label>
           <input id="email" type="email" required placeholder="you@example.com"
                  class="w-full bg-gray-700 border border-gray-700 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
         </div>
 
         <div>
-          <label class="block text-sm text-gray-300 mb-1">Tenant identifier</label>
-          <input id="tenantId" type="text" required placeholder="Enter tenant id or shop domain"
+          <label class="block text-sm text-gray-300 mb-1">Tenant ID or Shop Domain</label>
+          <input id="tenantId" type="text" required placeholder="1 or myshop.myshopify.com"
                  class="w-full bg-gray-700 border border-gray-700 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-          <p class="text-xs text-gray-400 mt-1">Use the numeric <code>x-tenant-id</code> or the Shopify domain (e.g. myshop.myshopify.com). This app will store it locally for demo.</p>
+          <p class="text-xs text-gray-400 mt-1">Use numeric ID or Shopify domain</p>
         </div>
+
+        <div id="errorMsg" class="hidden p-3 bg-red-900 border border-red-700 rounded-md text-red-200 text-sm"></div>
 
         <div class="flex items-center justify-between gap-3">
           <button type="submit" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium">
-            Enter Dashboard
+            Login
           </button>
-          <button id="demoBtn" type="button" class="px-3 py-2 border border-gray-700 rounded-md text-gray-300">Use Demo</button>
+          <button id="demoBtn" type="button" class="px-3 py-2 border border-gray-700 rounded-md text-gray-300 hover:bg-gray-700">Demo</button>
         </div>
 
-        <p class="text-xs text-gray-500 mt-3">Note: This is a demo frontend. No extra deployment — files served from the backend.</p>
+        <p class="text-xs text-gray-500 mt-3">JWT-based authentication • Multi-tenant safe</p>
       </form>
     </div>
   </div>
 
   <script>
-    // Basic client-side "auth" behaviour
     const form = document.getElementById('loginForm');
     const demoBtn = document.getElementById('demoBtn');
+    const errorMsg = document.getElementById('errorMsg');
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      errorMsg.classList.add('hidden');
+
       const email = document.getElementById('email').value.trim();
-      const tenant = document.getElementById('tenantId').value.trim();
-      if (!email || !tenant) return alert('Email and tenant are required');
-      localStorage.setItem('xeno_email', email);
-      localStorage.setItem('xeno_tenant', tenant);
-      // go to dashboard
-      location.href = '/dashboard.html';
+      const tenantId = document.getElementById('tenantId').value.trim();
+
+      if (!email || !tenantId) {
+        showError('Email and tenant are required');
+        return;
+      }
+
+      try {
+        const response = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, tenantId })
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          showError(data.error || 'Login failed');
+          return;
+        }
+
+        const data = await response.json();
+        localStorage.setItem('xeno_token', data.token);
+        localStorage.setItem('xeno_email', email);
+        localStorage.setItem('xeno_tenant', data.tenant.id);
+        localStorage.setItem('xeno_shop', data.tenant.shopDomain);
+
+        location.href = '/dashboard.html';
+      } catch (err) {
+        showError('Network error: ' + err.message);
+      }
     });
 
-    demoBtn.addEventListener('click', () => {
-      // Demo values — change to a tenant you have in DB
-      localStorage.setItem('xeno_email', 'demo@xeno.com');
-      localStorage.setItem('xeno_tenant', '1'); // default tenant id
-      location.href = '/dashboard.html';
+    demoBtn.addEventListener('click', async () => {
+      errorMsg.classList.add('hidden');
+      try {
+        const response = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'demo@xeno.com', tenantId: '1' })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          localStorage.setItem('xeno_token', data.token);
+          localStorage.setItem('xeno_email', 'demo@xeno.com');
+          localStorage.setItem('xeno_tenant', data.tenant.id);
+          localStorage.setItem('xeno_shop', data.tenant.shopDomain);
+          location.href = '/dashboard.html';
+        } else {
+          showError('Demo tenant not found. Create a tenant first.');
+        }
+      } catch (err) {
+        showError('Demo error: ' + err.message);
+      }
     });
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.remove('hidden');
+    }
   </script>
 </body>
 </html>

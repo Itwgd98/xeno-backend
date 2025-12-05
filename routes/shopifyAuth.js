@@ -2,8 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import axios from "axios";
 import Store from "../models/Store.js";
-
-
+import Tenant from "../models/Tenant.js";
+import { logger } from "../utils/logger.js";
 
 dotenv.config();
 
@@ -25,7 +25,7 @@ router.get("/install", (req, res) => {
   res.redirect(installUrl);
 });
 
-// STEP 2 — OAuth callback
+// STEP 2 — OAuth callback - persist token to database
 router.get("/callback", async (req, res) => {
   const { shop, code } = req.query;
 
@@ -46,15 +46,44 @@ router.get("/callback", async (req, res) => {
 
     const accessToken = tokenResponse.data.access_token;
 
-    // Save token later in DB… for now return success
-    return res.json({
+    // Find or create tenant
+    let tenant = await Tenant.findOne({ where: { shopDomain: shop } });
+    if (!tenant) {
+      tenant = await Tenant.create({
+        shopName: shop.split('.')[0],
+        shopDomain: shop,
+        accessToken
+      });
+      logger.info('New tenant created', { shop, tenantId: tenant.id });
+    } else {
+      await tenant.update({ accessToken });
+      logger.info('Tenant updated with new token', { shop, tenantId: tenant.id });
+    }
+
+    // Save or update store
+    let store = await Store.findOne({ where: { shop, tenantId: tenant.id } });
+    if (!store) {
+      store = await Store.create({
+        shop,
+        accessToken,
+        tenantId: tenant.id,
+        webhooksConfigured: false
+      });
+      logger.info('New store created', { shop, storeId: store.id });
+    } else {
+      await store.update({ accessToken });
+      logger.info('Store updated with new token', { shop, storeId: store.id });
+    }
+
+    res.json({
       message: "Shop connected successfully!",
       shop,
-      accessToken,
+      tenantId: tenant.id,
+      accessToken
     });
   } catch (err) {
-    console.error("OAuth Error:", err.response?.data || err);
-    return res.status(500).send("OAuth failed");
+    logger.error("OAuth Error", { shop, error: err.response?.data || err.message });
+    return res.status(500).send("OAuth failed: " + (err.response?.data?.error_description || err.message));
   }
 });
 
