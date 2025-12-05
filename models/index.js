@@ -31,6 +31,17 @@ export const connectDB = async () => {
   }
 };
 
+// Sync all models to create tables if they don't exist
+export const syncDB = async () => {
+  try {
+    await sequelize.sync({ alter: true });
+    console.log("Database synchronized successfully!");
+  } catch (error) {
+    console.error("Error synchronizing database:", error);
+    throw error;
+  }
+};
+
 /* ---------------------------------------------------------
    MODEL ASSOCIATIONS
 ----------------------------------------------------------*/

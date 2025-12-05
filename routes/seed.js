@@ -1,5 +1,6 @@
 import express from "express";
 import { logger } from "../utils/logger.js";
+import { syncDB } from "../models/index.js";
 import Tenant from "../models/Tenant.js";
 import Store from "../models/Store.js";
 
@@ -13,6 +14,11 @@ const router = express.Router();
 router.post("/demo", async (req, res) => {
   try {
     logger.info("Seeding demo tenant and store...");
+
+    // First, sync the database schema
+    logger.info("Syncing database schema...");
+    await syncDB();
+    logger.info("Database schema synced successfully");
 
     // Check if demo tenant already exists
     let tenant = await Tenant.findOne({
