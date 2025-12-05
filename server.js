@@ -16,6 +16,7 @@ import metricsRoute from "./routes/metrics.js";
 import authRoute from "./routes/auth.js";
 import ordersRoute from "./routes/orders.js";
 import syncRoute from "./routes/sync.js";
+import seedRoute from "./routes/seed.js";
 
 import tenantMiddleware from "./middleware/tenant.js";
 
@@ -46,6 +47,7 @@ app.use(
 ------------------------------------------------------ */
 app.use("/auth", authRoute);
 app.use("/sync", syncRoute);
+app.use("/seed", seedRoute);
 
 /* ------------------------------------------------------
    4) Shopify OAuth routes
