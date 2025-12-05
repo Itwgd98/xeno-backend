@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xeno — Seed Database</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+  <style>
+    html, body { height: 100%; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 antialiased">
+  <div class="min-h-screen flex items-center justify-center px-4">
+    <div class="max-w-md w-full bg-gray-800 rounded-2xl shadow-xl p-8">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-pink-500 rounded-lg flex items-center justify-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-white">
+            <path d="M12 2L19 8v8l-7 6-7-6V8l7-6z" fill="currentColor"></path>
+          </svg>
+        </div>
+        <h1 class="text-2xl font-semibold">Xeno Setup</h1>
+      </div>
+
+      <div id="content">
+        <p class="text-gray-300 mb-4">Initialize your demo tenant and store in the database.</p>
+        
+        <button id="seedBtn" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium mb-4">
+          🌱 Seed Database
+        </button>
+
+        <div id="status" class="text-sm text-gray-400 mb-4"></div>
+
+        <div id="result" class="hidden bg-gray-700 rounded-lg p-4 mb-4">
+          <p class="text-sm font-mono" id="resultText"></p>
+        </div>
+
+        <button id="dashboardBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-medium hidden">
+          Go to Dashboard →
+        </button>
+      </div>
+
+      <p class="text-xs text-gray-500 mt-6 text-center">After seeding, use email: <strong>demo@xeno.com</strong> and tenant ID: <strong>1</strong></p>
+    </div>
+  </div>
+
+  <script>
+    const seedBtn = document.getElementById('seedBtn');
+    const status = document.getElementById('status');
+    const result = document.getElementById('result');
+    const resultText = document.getElementById('resultText');
+    const dashboardBtn = document.getElementById('dashboardBtn');
+
+    seedBtn.addEventListener('click', async () => {
+      seedBtn.disabled = true;
+      seedBtn.textContent = '⏳ Seeding...';
+      status.textContent = 'Creating demo tenant and store...';
+      result.classList.add('hidden');
+
+      try {
+        const response = await fetch('/seed/demo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          status.textContent = '✅ Success!';
+          status.classList.remove('text-gray-400');
+          status.classList.add('text-green-400');
+          
+          result.classList.remove('hidden');
+          resultText.innerHTML = `
+            <strong>Tenant Created:</strong><br>
+            ID: ${data.tenant.id}<br>
+            Name: ${data.tenant.name}<br><br>
+            <strong>Store Created:</strong><br>
+            ID: ${data.store.id}<br>
+            Name: ${data.store.name}<br><br>
+            <strong>Login Credentials:</strong><br>
+            Email: ${data.credentials.email}<br>
+            Tenant ID: ${data.credentials.tenantId}
+          `;
+
+          seedBtn.hidden = true;
+          dashboardBtn.classList.remove('hidden');
+        } else {
+          status.textContent = '⚠️ ' + (data.message || 'Failed');
+          status.classList.remove('text-gray-400');
+          status.classList.add('text-yellow-400');
+          
+          result.classList.remove('hidden');
+          resultText.textContent = data.error || 'Unknown error';
+          resultText.classList.add('text-red-400');
+
+          seedBtn.disabled = false;
+          seedBtn.textContent = '🌱 Seed Database';
+        }
+      } catch (error) {
+        status.textContent = '❌ Error';
+        status.classList.remove('text-gray-400');
+        status.classList.add('text-red-400');
+        
+        result.classList.remove('hidden');
+        resultText.textContent = error.message;
+        resultText.classList.add('text-red-400');
+
+        seedBtn.disabled = false;
+        seedBtn.textContent = '🌱 Seed Database';
+      }
+    });
+
+    dashboardBtn.addEventListener('click', () => {
+      localStorage.setItem('xeno_email', 'demo@xeno.com');
+      localStorage.setItem('xeno_tenant', '1');
+      location.href = '/dashboard.html';
+    });
+
+    // Check if already seeded
+    fetch('/seed/status')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          status.textContent = '✅ Demo tenant already exists!';
+          status.classList.remove('text-gray-400');
+          status.classList.add('text-green-400');
+          seedBtn.hidden = true;
+          dashboardBtn.classList.remove('hidden');
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

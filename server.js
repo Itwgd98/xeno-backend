@@ -78,6 +78,10 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "index.html"));
 });
 
+app.get("/seed", (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend", "seed.html"));
+});
+
 /* ------------------------------------------------------
    7) Health check
 ------------------------------------------------------ */
