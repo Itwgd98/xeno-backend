@@ -2,6 +2,11 @@ import { DataTypes } from "sequelize";
 import sequelize from "../utils/db.js";
 
 const Tenant = sequelize.define("Tenant", {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   shopName: {
     type: DataTypes.STRING,
     allowNull: false,
